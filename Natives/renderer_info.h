@@ -94,9 +94,9 @@ static inline bool ame_renderer_uses_angle(ame_renderer_t r)
     return r == AME_RENDERER_AUTO || r == AME_RENDERER_GL4ES || r == AME_RENDERER_ANGLE || r == AME_RENDERER_MOBILEGLUES;
 }
 
-// OpenGL renderers that render through Vulkan themselves. Zink and MobileGL ship their
-// own MoltenVK (dlopen'ed by name / linked into the dylib), so the Vulkan driver selected
-// in the settings does not reach them until they are rebuilt against it.
+// OpenGL renderers that render through Vulkan themselves. Zink has its MoltenVK baked
+// in (it dlopens libMoltenVK.dylib by name), MobileGL loads the driver picked in the
+// settings through the libame_vulkan.dylib dispatch shim.
 static inline bool ame_renderer_consumes_vulkan(ame_renderer_t r)
 {
     return r == AME_RENDERER_ZINK || r == AME_RENDERER_MOBILEGL;

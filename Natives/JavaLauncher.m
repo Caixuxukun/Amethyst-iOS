@@ -295,9 +295,14 @@ int launchJVM(NSString *username, id launchTarget, int width, int height, int mi
                       driver == AME_VULKAN_DRIVER_KOSMICKRISP ? [KosmicKrispConfig activeConfigSummary]
                                                              : [MoltenVKConfig activeConfigSummary]);
                 if (rendererNeedsVulkan) {
-                    NSLog(@"[Vulkan] %@ renders through its own MoltenVK, the %s driver is %@",
-                          renderer, ame_vulkan_driver_display_name(driver),
-                          gameHasVulkanBackend ? @"only used by the game's Vulkan backend" : @"not used by this game");
+                    if (ame_renderer_from_name(renderer.UTF8String) == AME_RENDERER_ZINK) {
+                        NSLog(@"[Vulkan] Zink renders through its own MoltenVK, the %s driver is %@",
+                              ame_vulkan_driver_display_name(driver),
+                              gameHasVulkanBackend ? @"only used by the game's Vulkan backend" : @"not used by this game");
+                    } else {
+                        NSLog(@"[Vulkan] %@ renders through %s via the libame_vulkan loader",
+                              renderer, ame_vulkan_driver_display_name(driver));
+                    }
                 }
             } else {
                 NSLog(@"[Vulkan] %s preflight failed: %s", loadPath.lastPathComponent.UTF8String, pf.error);

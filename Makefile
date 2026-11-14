@@ -377,7 +377,12 @@ dep_mobilegl:
 		$(MOBILEGL_SOURCE_DIR)
 
 	cmake --build $(WORKINGDIR)/mobilegl --config $(CMAKE_BUILD_TYPE) -j$(JOBS) --target MobileGL -- -k
-	install_name_tool -change @rpath/MoltenVK.framework/MoltenVK @rpath/libMoltenVK.dylib $(WORKINGDIR)/mobilegl/libMobileGL.dylib
+	# MobileGL is linked against MoltenVK, but it loads the Vulkan driver through the
+	# launcher shim at runtime so the Vulkan driver setting applies to it too
+	install_name_tool -change @rpath/MoltenVK.framework/MoltenVK @rpath/libame_vulkan.dylib $(WORKINGDIR)/mobilegl/libMobileGL.dylib
+	if ! otool -L $(WORKINGDIR)/mobilegl/libMobileGL.dylib | grep -q 'libame_vulkan.dylib'; then \
+		echo 'libMobileGL still links the Vulkan driver directly'; exit 1; \
+	fi
 	if otool -l $(WORKINGDIR)/mobilegl/libMobileGL.dylib | grep -q 'path $(SOURCEDIR)/Natives/resources/Frameworks '; then \
 		install_name_tool -delete_rpath $(SOURCEDIR)/Natives/resources/Frameworks $(WORKINGDIR)/mobilegl/libMobileGL.dylib; \
 	fi
@@ -405,6 +410,7 @@ dep_ame_vulkan:
 	mkdir -p $(WORKINGDIR)
 	xcrun --sdk iphoneos clang \
 		-O2 -Wall -Wextra -Werror -arch arm64 -isysroot "$(SDKPATH)" -miphoneos-version-min=17.0 \
+		-I"$(SOURCEDIR)/Natives/external/mesa" \
 		-fvisibility=default -dynamiclib -install_name @rpath/libame_vulkan.dylib \
 		-o $(WORKINGDIR)/libame_vulkan.dylib \
 		$(SOURCEDIR)/Natives/ctxbridges/vk_loader_shim.c || exit 1
