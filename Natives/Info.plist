@@ -116,6 +116,10 @@
 		<string>filza</string>
 		<string>santander</string>
 		<string>shareddocuments</string>
+		<string>stikdebug</string>
+		<string>stikjit</string>
+		<string>sidestore</string>
+		<string>localdevvpn</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
@@ -126,9 +130,11 @@
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_altserver._tcp</string>
+		<string>_remotepairing._tcp</string>
+		<string>_remotepairing-pairable-host._tcp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Angel Aura Amethyst uses the local network to find and communicate with AltServer and LAN servers.</string>
+	<string>Angel Aura Amethyst uses the local network to find and communicate with AltServer and LAN servers, and to pair this iPhone with itself for built-in JIT.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Angel Aura Amethyst uses the microphone to enable support for voice chat mods.</string>
 	<key>UIApplicationSceneManifest</key>
@@ -162,6 +168,7 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
+		<string>audio</string>
 	</array>
 	<key>UIDeviceFamily</key>
 	<array>

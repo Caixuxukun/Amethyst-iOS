@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.6)
 project(AngelAuraAmethyst)
 
+if(NOT DEFINED AME_JIT)
+  set(AME_JIT 0)
+endif()
+
 configure_file(${CMAKE_CURRENT_LIST_DIR}/config.h.in ${CMAKE_CURRENT_LIST_DIR}/config.h)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -target arm64-apple-ios -mcpu=apple-a8 -fcommon -fobjc-arc -ObjC -F'${CMAKE_OSX_SYSROOT}/System/Cryptexes/OS/System/Library/Frameworks'")
@@ -104,6 +108,7 @@ add_executable(AngelAuraAmethyst
   main.m
   main_hook.m
   JavaLauncher.m
+  JITManager.m
   LWJGLVersions.m
   MoltenVKConfig.m
   KosmicKrispConfig.m
@@ -222,6 +227,18 @@ target_link_libraries(AngelAuraAmethyst
   "-framework WebKit"
   "-weak_framework SafariServices"
 )
+
+target_compile_definitions(AngelAuraAmethyst PRIVATE AME_JIT=${AME_JIT})
+
+if(AME_JIT)
+  target_link_libraries(AngelAuraAmethyst
+    "-lc++"
+    "-framework AVFAudio"
+    "-framework Security"
+    "-framework UserNotifications"
+    "${CMAKE_CURRENT_LIST_DIR}/build/libstikpair_ffi.a"
+  )
+endif()
 
 set_target_properties(AngelAuraAmethyst PROPERTIES
   MACOSX_BUNDLE TRUE

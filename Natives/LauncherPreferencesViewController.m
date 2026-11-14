@@ -1,7 +1,9 @@
 #import <Foundation/Foundation.h>
+#import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 #import "DBNumberedSlider.h"
 #import "HostManagerBridge.h"
+#import "JITManager.h"
 #import "LauncherNavigationController.h"
 #import "LauncherMenuViewController.h"
 #import "LauncherPreferences.h"
@@ -15,9 +17,10 @@
 #import "utils.h"
 #import "installer/modpack/CurseForgeAPI.h"
 
-@interface LauncherPreferencesViewController()
+@interface LauncherPreferencesViewController() <UIDocumentPickerDelegate>
 @property(nonatomic) NSArray<NSString*> *rendererKeys, *rendererList;
 @property(nonatomic) NSArray<NSString*> *vulkanRendererKeys, *vulkanRendererList;
+- (void)presentPairingFileImporter;
 @end
 
 @implementation LauncherPreferencesViewController
@@ -46,7 +49,7 @@
     self.hasDetail = YES;
     self.prefDetailVisible = self.navigationController == nil;
     
-    self.prefSections = @[@"general", @"video", @"control", @"java", @"debug"];
+    self.prefSections = @[@"general", @"video", @"control", @"java", @"debug", @"jit"];
 
     self.rendererKeys = getRendererKeys(NO);
     self.rendererList = getRendererNames(NO);
@@ -451,6 +454,87 @@
                 @"icon": @"textformat.abc.dottedunderline",
                 @"type": self.typeSwitch
             }
+        ], @[
+            // JIT acquisition
+            @{@"icon": @"bolt"},
+            @{@"key": @"method",
+              @"hasDetail": @YES,
+              @"icon": @"wrench.and.screwdriver",
+              @"type": self.typePickField,
+              @"enableCondition": whenNotInGame,
+              @"pickKeys": @[@"wait", @"stikdebug", @"builtin"],
+              @"pickList": @[
+                  localize(@"preference.title.jit.wait", nil),
+                  localize(@"preference.title.jit.stikdebug", nil),
+                  localize(@"preference.title.jit.builtin", nil)
+              ]
+            },
+            @{@"key": @"pairing",
+              @"icon": @"doc.badge.plus",
+              @"type": self.typeButton,
+              @"skipDoneAlert": @YES,
+              @"enableCondition": whenNotInGame,
+              @"action": ^void(){
+                  [self presentPairingFileImporter];
+              }
+            },
+            @{@"key": @"pair",
+              @"icon": @"iphone.and.arrow.forward",
+              @"type": self.typeButton,
+              @"skipDoneAlert": @YES,
+              @"enableCondition": ^BOOL(){
+                  return whenNotInGame() && JITManager.pairingSupported;
+              },
+              @"action": ^void(){
+                  [JITManager startPairingFromViewController:self];
+              }
+            },
+            @{@"key": @"prepare",
+              @"icon": @"checkmark.shield",
+              @"type": self.typeButton,
+              @"skipDoneAlert": @YES,
+              @"enableCondition": ^BOOL(){
+                  return whenNotInGame() && JITManager.builtInSupported;
+              },
+              @"action": ^void(){
+                  [JITManager prepareDeviceFromViewController:self];
+              }
+            },
+            @{@"key": @"reset_ddi",
+              @"icon": @"arrow.clockwise",
+              @"type": self.typeButton,
+              @"skipDoneAlert": @YES,
+              @"enableCondition": ^BOOL(){
+                  return whenNotInGame() && JITManager.builtInSupported;
+              },
+              @"action": ^void(){
+                  [JITManager resetDeveloperDiskImageFromViewController:self];
+              }
+            },
+            @{@"key": @"force_script",
+              @"hasDetail": @YES,
+              @"icon": @"exclamationmark.triangle",
+              @"type": self.typeSwitch,
+              @"enableCondition": whenNotInGame
+            },
+            @{@"key": @"localdevvpn",
+              @"icon": @"network",
+              @"type": self.typeButton,
+              @"skipDoneAlert": @YES,
+              @"enableCondition": whenNotInGame,
+              @"action": ^void(){
+                  [JITManager openLocalDevVPNPage];
+              }
+            },
+            @{@"key": @"stikdebug_page",
+              @"icon": @"arrow.down.circle",
+              @"type": self.typeButton,
+              @"skipDoneAlert": @YES,
+              @"enableCondition": whenNotInGame,
+              @"action": ^void(){
+                  [JITManager openStikDebugPage];
+              }
+            }
         ]
     ];
 
@@ -475,6 +559,34 @@
 
 - (void)actionClose {
     [self dismissViewControllerAnimated:YES completion:nil];
+}
+
+#pragma mark JIT frontend
+
+- (void)presentPairingFileImporter {
+    UIDocumentPickerViewController *picker =
+        [[UIDocumentPickerViewController alloc] initForOpeningContentTypes:@[UTTypeItem] asCopy:YES];
+    picker.delegate = self;
+    picker.allowsMultipleSelection = NO;
+    [self presentViewController:picker animated:YES completion:nil];
+}
+
+- (void)documentPicker:(UIDocumentPickerViewController *)controller didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls {
+    NSURL *url = urls.firstObject;
+    if (url == nil) return;
+    __weak LauncherPreferencesViewController *weakSelf = self;
+    [JITManager importPairingFileFromURL:url completion:^(NSError *error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            UIAlertController *alert = [UIAlertController
+                alertControllerWithTitle:error == nil ? @"Pairing file imported" : @"Import failed"
+                                 message:error == nil
+                                     ? [NSString stringWithFormat:@"Stored at %@", JITManager.pairingPath]
+                                     : error.localizedDescription
+                          preferredStyle:UIAlertControllerStyleAlert];
+            [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleCancel handler:nil]];
+            [weakSelf presentViewController:alert animated:YES completion:nil];
+        });
+    }];
 }
 
 #pragma mark UITableView

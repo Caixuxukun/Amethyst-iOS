@@ -95,6 +95,18 @@ jobs:
           git commit -am "CI: Update gl4es"
           git push
 
+      - name: Install JIT helper build tools
+        run: |
+          brew install xcodegen
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          if ! command -v cargo >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal || exit 1
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+          export PATH="$HOME/.cargo/bin:$PATH"
+          rustup target add aarch64-apple-ios
+          cargo --version
+
       - name: Build for ${{ matrix.platform_name }}
         run: |
           export PATH=/opt/homebrew/bin:$PATH

@@ -181,6 +181,22 @@
 "preference.title.vulkan_renderer.moltenvk" = "MoltenVK - 导出 Vulkan 1.4，实验性";
 "preference.title.vulkan_renderer.kosmickrisp" = "KosmicKrisp - 导出 Vulkan 1.4，实验性";
 
+"preference.section.jit" = "JIT";
+"preference.title.method" = "JIT 方式";
+"preference.detail.method" = "自动会打开 StikDebug 附着；内置方式在 Amethyst 自带的扩展助手里运行 StikJIT，不需要第二个 App 也不需要电脑。";
+"preference.title.jit.wait" = "等待调试器";
+"preference.title.jit.stikdebug" = "StikDebug App";
+"preference.title.jit.builtin" = "内置 StikJIT（iOS 17.4+）";
+"preference.title.pairing" = "配对文件";
+"preference.title.pair" = "本机自配对（iOS 27+）";
+"preference.title.prepare" = "准备内置 JIT";
+"preference.title.reset_ddi" = "重置开发者磁盘镜像";
+"preference.title.force_script" = "强制发送 JIT 脚本";
+"preference.detail.force_script" = "即使无法确定设备是否需要，也把 Amethyst 的 UniversalJIT26.js 发给 JIT 助手。只有在 JIT 断点失败时才需要打开。";
+"preference.title.localdevvpn" = "获取 LocalDevVPN";
+"preference.title.stikdebug_page" = "获取 StikDebug";
+
+
 "preference.title.resolution" = "分辨率缩放 (%)";
 "preference.detail.resolution" = "降低分辨率可能会提升FPS。默认分辨率为屏幕的分辨率";
 "preference.title.max_framerate" = "最大帧率";

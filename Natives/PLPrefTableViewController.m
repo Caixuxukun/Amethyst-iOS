@@ -417,6 +417,8 @@
         invokeAction();
     }
 
+    if ([item[@"skipDoneAlert"] boolValue]) return;
+
     UIView *view = [self.tableView cellForRowAtIndexPath:indexPath];
     NSString *title = localize(([NSString stringWithFormat:@"preference.title.done.%@", key]), nil);
     [self showAlertOnView:view title:title message:nil];

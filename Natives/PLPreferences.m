@@ -85,6 +85,11 @@
         };
         [defaults[@"general"] addEntriesFromDictionary:general];
 
+        defaults[@"jit"] = @{
+            @"method": @"stikdebug",
+            @"force_script": @NO
+        }.mutableCopy;
+
         defaults[@"java"][@"manage_runtime"] = @""; // stub
         defaults[@"debug"] = @{
             @"debug_always_attached_jit": @NO,

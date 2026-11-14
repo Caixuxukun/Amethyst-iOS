@@ -110,6 +110,17 @@ else
 $(error PLATFORM is not valid.)
 endif
 
+# Built-in JIT (StikJIT helper extension + StikPair pairing) is iOS only: the Rust
+# pairing library is cross-compiled for aarch64-apple-ios and the helper needs the
+# iOS app-extension product.
+ifeq ($(PLATFORM),2)
+AME_JIT := 1
+else
+AME_JIT := 0
+endif
+JIT_DEPS := $(if $(filter 1,$(AME_JIT)),dep_stikpair,)
+JIT_PAYLOAD_DEPS := $(if $(filter 1,$(AME_JIT)),dep_jithelper,)
+
 AME_BUNDLE_DIR      ?= $(OUTPUTDIR)/AngelAuraAmethyst.app
 AME_JRE8_DIR        ?= $(SOURCEDIR)/depends/java-8-openjdk
 AME_JRE17_DIR       ?= $(SOURCEDIR)/depends/java-17-openjdk
@@ -118,6 +129,12 @@ AME_JRE25_DIR       ?= $(SOURCEDIR)/depends/java-25-openjdk
 MOBILEGL_SOURCE_DIR	?= $(SOURCEDIR)/Natives/external/MobileGL
 MOLTENVK_LIBRARY    ?= $(SOURCEDIR)/Natives/resources/Frameworks/libMoltenVK.dylib
 MOBILEGL_LOG_LEVEL   ?= MOBILEGL_LOG_LEVEL_INFO
+
+# Built-in JIT: StikJIT helper extension + on-device pairing (StikPair rust crate)
+STIKJIT_REPO     ?= https://github.com/StikDebug/StikJIT.git
+STIKJIT_VERSION  ?= 2.0.1
+STIKJIT_DIR      := $(WORKINGDIR)/StikJIT
+STIKPAIR_DIR     := $(SOURCEDIR)/Natives/external/stikpair
 
 # Function to use later for checking dependencies
 METHOD_DEPCHECK   = $(shell $(1) >/dev/null 2>&1 && echo 1)
@@ -275,7 +292,7 @@ check:
 		$(info $(shell printf "%-20s" "$(v)") = $(value $(v)))) \
 	)
 
-native: dep_mg
+native: dep_mg $(JIT_DEPS)
 	echo '[Amethyst v$(VERSION)] native - start'
 	mkdir -p $(WORKINGDIR)
 	cd $(WORKINGDIR) && cmake \
@@ -287,6 +304,7 @@ native: dep_mg
 		-DCMAKE_OSX_ARCHITECTURES=arm64 \
 		-DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
 		-DCMAKE_C_FLAGS="-arch arm64" \
+		-DAME_JIT=$(AME_JIT) \
 		-DCONFIG_BRANCH="$(BRANCH)" \
 		-DCONFIG_COMMIT="$(COMMIT)" \
 		-DCONFIG_RELEASE=$(RELEASE) \
@@ -416,6 +434,35 @@ dep_ame_vulkan:
 		$(SOURCEDIR)/Natives/ctxbridges/vk_loader_shim.c || exit 1
 	echo '[Amethyst v$(VERSION)] dep_ame_vulkan - end'
 
+dep_stikpair:
+	echo '[Amethyst v$(VERSION)] dep_stikpair - start'
+	mkdir -p $(WORKINGDIR)
+	cd $(SOURCEDIR)/Natives/external/stikpair && cargo build --release --target aarch64-apple-ios
+	cp $(SOURCEDIR)/Natives/external/stikpair/target/aarch64-apple-ios/release/libstikpair_ffi.a $(WORKINGDIR)/libstikpair_ffi.a
+	echo '[Amethyst v$(VERSION)] dep_stikpair - end'
+
+dep_stikjit:
+	echo '[Amethyst v$(VERSION)] dep_stikjit - start'
+	rm -rf $(STIKJIT_DIR)
+	git clone --depth 1 --branch $(STIKJIT_VERSION) $(STIKJIT_REPO) $(STIKJIT_DIR) || exit 1
+	echo '[Amethyst v$(VERSION)] dep_stikjit - end'
+
+# Builds Natives/jit/AmethystJITHelper.swift into PlugIns/AmethystJITHelper.appex.
+# StikJIT's sources are compiled into that extension instead of embedding the
+# prebuilt XCFramework, so the Swift compiler that builds Amethyst also builds
+# the helper (no Swift module/version mismatch).
+dep_jithelper: dep_stikjit
+	echo '[Amethyst v$(VERSION)] dep_jithelper - start'
+	rm -rf $(WORKINGDIR)/jithelper
+	mkdir -p $(WORKINGDIR)/jithelper
+	cp -R $(STIKJIT_DIR)/Sources $(WORKINGDIR)/jithelper/Sources || exit 1
+	cp -R $(STIKJIT_DIR)/idevice $(WORKINGDIR)/jithelper/idevice || exit 1
+	cp -R $(STIKJIT_DIR)/iokit $(WORKINGDIR)/jithelper/iokit || exit 1
+	cp $(SOURCEDIR)/Natives/jit/AmethystJITHelper.swift $(SOURCEDIR)/Natives/jit/AmethystJITHelper-Info.plist $(SOURCEDIR)/Natives/jit/project.yml $(WORKINGDIR)/jithelper/ || exit 1
+	cd $(WORKINGDIR)/jithelper && xcodegen generate || exit 1
+	cd $(WORKINGDIR)/jithelper && xcodebuild -project AmethystJITHelper.xcodeproj -target AmethystJITHelper -configuration Release -sdk iphoneos -arch arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CONFIGURATION_BUILD_DIR=$(WORKINGDIR) build || exit 1
+	echo '[Amethyst v$(VERSION)] dep_jithelper - end'
+
 assets:
 	echo '[Amethyst v$(VERSION)] assets - start'
 	if [ '$(IOS)' = '0' ] && [ '$(DETECTPLAT)' = 'Darwin' ]; then \
@@ -431,7 +478,7 @@ assets:
 	fi
 	echo '[Amethyst v$(VERSION)] assets - end'
 
-payload: native dep_mg dep_mobilegl dep_mcmetal dep_ame_vulkan java jre assets
+payload: native dep_mg dep_mobilegl dep_mcmetal dep_ame_vulkan $(JIT_PAYLOAD_DEPS) java jre assets
 	echo '[Amethyst v$(VERSION)] payload - start'
 	$(call METHOD_DIRCHECK,$(WORKINGDIR)/AngelAuraAmethyst.app/libs)
 	$(call METHOD_DIRCHECK,$(WORKINGDIR)/AngelAuraAmethyst.app/libs_caciocavallo)
@@ -457,6 +504,10 @@ payload: native dep_mg dep_mobilegl dep_mcmetal dep_ame_vulkan java jre assets
 	if [ '$(SLIMMED_ONLY)' != '1' ]; then \
 		cp -R $(OUTPUTDIR)/java_runtimes $(OUTPUTDIR)/Payload/AngelAuraAmethyst.app; \
 	fi
+	if [ '$(AME_JIT)' = '1' ] && [ -d $(WORKINGDIR)/AmethystJITHelper.appex ]; then \
+		mkdir -p $(WORKINGDIR)/AngelAuraAmethyst.app/PlugIns; \
+		cp -R $(WORKINGDIR)/AmethystJITHelper.appex $(WORKINGDIR)/AngelAuraAmethyst.app/PlugIns/ || exit 1; \
+	fi
 	ldid -S $(OUTPUTDIR)/Payload/AngelAuraAmethyst.app; \
 	if [ '$(TROLLSTORE_JIT_ENT)' == '1' ]; then \
 		ldid -S$(SOURCEDIR)/entitlements.trollstore.xml $(OUTPUTDIR)/Payload/AngelAuraAmethyst.app/AngelAuraAmethyst; \
@@ -464,6 +515,13 @@ payload: native dep_mg dep_mobilegl dep_mcmetal dep_ame_vulkan java jre assets
 		ldid -S$(SOURCEDIR)/entitlements.codesign.xml $(OUTPUTDIR)/Payload/AngelAuraAmethyst.app/AngelAuraAmethyst; \
 	else \
 		ldid -S$(SOURCEDIR)/entitlements.sideload.xml $(OUTPUTDIR)/Payload/AngelAuraAmethyst.app/AngelAuraAmethyst; \
+	fi
+	if [ '$(AME_JIT)' = '1' ] && [ -d $(OUTPUTDIR)/Payload/AngelAuraAmethyst.app/PlugIns/AmethystJITHelper.appex ]; then \
+		if [ '$(TROLLSTORE_JIT_ENT)' == '1' ]; then \
+			ldid -S$(SOURCEDIR)/entitlements.trollstore.xml $(OUTPUTDIR)/Payload/AngelAuraAmethyst.app/PlugIns/AmethystJITHelper.appex/AmethystJITHelper; \
+		else \
+			ldid -S $(OUTPUTDIR)/Payload/AngelAuraAmethyst.app/PlugIns/AmethystJITHelper.appex/AmethystJITHelper; \
+		fi; \
 	fi
 	chmod -R 755 $(OUTPUTDIR)/Payload
 	if [ '$(PLATFORM)' != '2' ]; then \

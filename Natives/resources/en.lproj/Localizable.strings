@@ -198,6 +198,21 @@
 "preference.title.vulkan_renderer.moltenvk" = "MoltenVK - exports Vulkan 1.4, EXPERIMENTAL";
 "preference.title.vulkan_renderer.kosmickrisp" = "KosmicKrisp - exports Vulkan 1.4, EXPERIMENTAL";
 
+"preference.section.jit" = "JIT";
+"preference.title.method" = "JIT method";
+"preference.detail.method" = "Automatic asks StikDebug to attach. Built-in runs StikJIT in Amethyst's own helper extension, so no second app and no computer are needed.";
+"preference.title.jit.wait" = "Wait for debugger";
+"preference.title.jit.stikdebug" = "StikDebug app";
+"preference.title.jit.builtin" = "Built-in StikJIT (iOS 17.4+)";
+"preference.title.pairing" = "Pairing file";
+"preference.title.pair" = "Pair this iPhone (iOS 27+)";
+"preference.title.prepare" = "Prepare built-in JIT";
+"preference.title.reset_ddi" = "Reset Developer Disk Image";
+"preference.title.force_script" = "Force JIT script";
+"preference.detail.force_script" = "Sends Amethyst's UniversalJIT26.js to the helper even when it is not sure the device needs it. Only enable this if JIT breakpoints fail.";
+"preference.title.localdevvpn" = "Get LocalDevVPN";
+"preference.title.stikdebug_page" = "Get StikDebug";
+
 "preference.title.resolution" = "Resolution (%)";
 "preference.detail.resolution" = "Allows you to decrease the game resolution.";
 "preference.title.max_framerate" = "Maximum framerate";

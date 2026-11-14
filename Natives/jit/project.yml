@@ -1,0 +1,46 @@
+# Generated helper project for Amethyst's built-in StikJIT extension.
+# Built by the Makefile after copying StikJIT's Swift sources, its idevice static
+# library and AmethystJITHelper.swift next to this file. A classic app extension on
+# com.apple.ar.viewer, which codelessly loads in a separate process; see
+# Natives/jit/AmethystJITHelper-Info.plist and Natives/JITManager.m for the host side.
+name: AmethystJITHelper
+options:
+  bundleIdPrefix: org.angelauramc.amethyst
+  deploymentTarget:
+    iOS: "17.4"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.2.0"
+    CURRENT_PROJECT_VERSION: "1.2.0"
+    CLANG_CXX_LIBRARY: "libc++"
+    GENERATE_INFOPLIST_FILE: YES
+    SWIFT_INCLUDE_PATHS: "$(SRCROOT)/idevice $(SRCROOT)/iokit"
+    HEADER_SEARCH_PATHS: "$(SRCROOT)/idevice $(SRCROOT)/iokit"
+    LIBRARY_SEARCH_PATHS: "$(SRCROOT)/idevice"
+    OTHER_LDFLAGS: "$(inherited) -Wl,-hidden-lidevice_ffi"
+
+targets:
+  AmethystJITHelper:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: AmethystJITHelper.swift
+    dependencies:
+      - sdk: JavaScriptCore.framework
+      - sdk: Network.framework
+      - sdk: Security.framework
+      - sdk: CFNetwork.framework
+      - sdk: SystemConfiguration.framework
+      - sdk: IOKit.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.angelauramc.amethyst.JITHelper
+        PRODUCT_NAME: AmethystJITHelper
+        INFOPLIST_FILE: AmethystJITHelper-Info.plist
+        DEAD_CODE_STRIPPING: YES
+        STRIP_INSTALLED_PRODUCT: YES
+        STRIP_STYLE: non-global
