@@ -507,8 +507,9 @@ payload: native dep_mg dep_mobilegl dep_mcmetal dep_ame_vulkan $(JIT_PAYLOAD_DEP
 		cp -R $(OUTPUTDIR)/java_runtimes $(OUTPUTDIR)/Payload/AngelAuraAmethyst.app; \
 	fi
 	if [ '$(AME_JIT)' = '1' ] && [ -d $(WORKINGDIR)/AmethystJITHelper.appex ]; then \
-		mkdir -p $(WORKINGDIR)/AngelAuraAmethyst.app/PlugIns; \
-		cp -R $(WORKINGDIR)/AmethystJITHelper.appex $(WORKINGDIR)/AngelAuraAmethyst.app/PlugIns/ || exit 1; \
+		mkdir -p $(OUTPUTDIR)/Payload/AngelAuraAmethyst.app/PlugIns; \
+		cp -R $(WORKINGDIR)/AmethystJITHelper.appex $(OUTPUTDIR)/Payload/AngelAuraAmethyst.app/PlugIns/ || exit 1; \
+		chmod -R 755 $(OUTPUTDIR)/Payload/AngelAuraAmethyst.app/PlugIns; \
 	fi
 	ldid -S $(OUTPUTDIR)/Payload/AngelAuraAmethyst.app; \
 	if [ '$(TROLLSTORE_JIT_ENT)' == '1' ]; then \

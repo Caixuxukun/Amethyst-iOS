@@ -448,6 +448,7 @@ static void AMEJITPostLocalNotification(NSString *title, NSString *body) {
         @"targetPID": @(getpid()),
         @"pairingBase64": [pairing base64EncodedStringWithOptions:0],
         @"scriptBase64": [scriptData base64EncodedStringWithOptions:0],
+        @"forceScript": @([self forceScript]),
     };
     [self sendHelperRequest:request completion:^(NSDictionary *response, NSError *error) {
         if (error) {

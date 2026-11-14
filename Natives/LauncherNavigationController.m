@@ -495,7 +495,7 @@ static void *ProgressObserverContext = &ProgressObserverContext;
                 failed = YES;
                 [alert dismissViewControllerAnimated:YES completion:^{
                     [weakSelf presentJITError:
-                        @"JIT was not enabled in time. Check Settings -> JIT (pairing file, LocalDevVPN, or StikDebug) and try again."];
+                        @"JIT was not enabled in time. If this is the first built-in run, use Settings -> JIT -> Prepare built-in JIT (it downloads the Developer Disk Image and needs LocalDevVPN), then try again."];
                 }];
             }
         });

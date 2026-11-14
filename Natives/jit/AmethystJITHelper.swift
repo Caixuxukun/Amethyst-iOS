@@ -20,6 +20,7 @@ private struct HelperRequest: Codable {
     let targetPID: Int32?
     let pairingBase64: String?
     let scriptBase64: String?
+    let forceScript: Bool?
 }
 
 private struct HelperResponse: Codable {
@@ -94,7 +95,7 @@ private enum HelperWork {
                     pairingFile: pairingURL,
                     ddiPaths: paths,
                     script: .customBase64(scriptBase64),
-                    forceScript: true,
+                    forceScript: request.forceScript ?? true,
                     preparationProgress: { NSLog("[AmethystJIT] prepare: %@", String(describing: $0)) },
                     progress: { NSLog("[AmethystJIT] %@", $0) })
                 _ = script
