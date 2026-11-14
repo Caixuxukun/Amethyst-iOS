@@ -231,7 +231,7 @@ target_link_libraries(AngelAuraAmethyst
 target_compile_definitions(AngelAuraAmethyst PRIVATE AME_JIT=${AME_JIT})
 
 if(AME_JIT)
-  target_link_libraries(AngelAuraAmethyst
+  target_link_libraries(AngelAuraAmethyst PRIVATE
     "-lc++"
     "-framework AVFAudio"
     "-framework Security"
