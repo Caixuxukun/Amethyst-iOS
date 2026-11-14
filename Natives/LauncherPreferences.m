@@ -8,12 +8,43 @@
 
 static PLPreferences* pref;
 
+// Before the OpenGL renderer and the Vulkan driver were separate settings, picking
+// MoltenVK/KosmicKrisp stored the driver in the renderer key and forced ANGLE for OpenGL.
+// Move those preferences to ANGLE + the Vulkan driver they had been using.
+static BOOL migrateLegacyRendererPreferences(NSMutableDictionary *prefDict) {
+    id videoObject = prefDict[@"video"];
+    if (![videoObject isKindOfClass:NSDictionary.class]) return NO;
+    NSMutableDictionary *video = videoObject;
+    if (![video isKindOfClass:NSMutableDictionary.class]) {
+        video = [video mutableCopy];
+        prefDict[@"video"] = video;
+    }
+
+    NSString *storedRenderer = video[@"renderer"];
+    if (![storedRenderer isKindOfClass:NSString.class] || !ame_renderer_name_is_vulkan_driver(storedRenderer.UTF8String)) {
+        return NO;
+    }
+
+    NSString *storedDriver = video[@"vulkan_renderer"];
+    if (![storedDriver isKindOfClass:NSString.class] || storedDriver.length == 0 ||
+        [storedDriver isEqualToString:@RENDERER_NAME_AUTO]) {
+        video[@"vulkan_renderer"] = storedRenderer;
+    }
+    video[@"renderer"] = @RENDERER_NAME_MTL_ANGLE;
+    NSLog(@"[Renderer] Migrated the renderer setting %@ to ANGLE + Vulkan driver %@",
+          storedRenderer, video[@"vulkan_renderer"]);
+    return YES;
+}
+
 void loadPreferences(BOOL reset) {
     assert(getenv("AME_HOME"));
     if (reset) {
         [pref reset];
     } else {
         pref = [[PLPreferences alloc] initWithAutomaticMigrator];
+    }
+    if (pref.globalPref && migrateLegacyRendererPreferences(pref.globalPref)) {
+        [pref saveGlobalPref];
     }
 }
 
@@ -22,6 +53,9 @@ void toggleIsolatedPref(BOOL forceEnable) {
         pref.instancePath = [NSString stringWithFormat:@"%s/launcher_preferences.plist", getenv("GAME_DIR")];
     }
     [pref toggleIsolationForced:forceEnable];
+    if (pref.instancePref && migrateLegacyRendererPreferences(pref.instancePref)) {
+        [pref saveInstancePref];
+    }
 }
 
 id getPrefObject(NSString *key) {
@@ -134,6 +168,7 @@ NSString* getSelectedJavaHome(NSString* defaultJRETag, int minVersion) {
 }
 
 #pragma mark Renderer
+// OpenGL renderers only: the Vulkan driver the game presents through is a separate setting
 NSArray* getRendererKeys(BOOL containsDefault) {
     NSMutableArray *array = @[
         @"auto",
@@ -141,9 +176,7 @@ NSArray* getRendererKeys(BOOL containsDefault) {
         @ RENDERER_NAME_MTL_ANGLE,
         @ RENDERER_NAME_MOBILEGLUES,
         @ RENDERER_NAME_MOBILEGL,
-        @ RENDERER_NAME_VK_ZINK,
-        @ RENDERER_NAME_MOLTENVK,
-        @ RENDERER_NAME_KOSMICKRISP
+        @ RENDERER_NAME_VK_ZINK
     ].mutableCopy;
 
     if (containsDefault) {
@@ -162,9 +195,36 @@ NSArray* getRendererNames(BOOL containsDefault) {
         localize(@"preference.title.renderer.debug.angle", nil),
         localize(@"preference.title.renderer.debug.mg", nil),
         localize(@"preference.title.renderer.debug.mobilegl", nil),
-        localize(@"preference.title.renderer.debug.zink", nil),
-        localize(@"preference.title.renderer.debug.moltenvk", nil),
-        localize(@"preference.title.renderer.debug.kosmickrisp", nil)
+        localize(@"preference.title.renderer.debug.zink", nil)
+    ].mutableCopy;
+
+    if (containsDefault) {
+        [array insertObject:@"(default)" atIndex:0];
+    }
+
+    return array;
+}
+
+// Vulkan drivers for the game's Vulkan backend
+NSArray* getVulkanRendererKeys(BOOL containsDefault) {
+    NSMutableArray *array = @[
+        @"auto",
+        @ RENDERER_NAME_MOLTENVK,
+        @ RENDERER_NAME_KOSMICKRISP
+    ].mutableCopy;
+
+    if (containsDefault) {
+        [array insertObject:@"(default)" atIndex:0];
+    }
+
+    return array;
+}
+
+NSArray* getVulkanRendererNames(BOOL containsDefault) {
+    NSMutableArray *array = @[
+        localize(@"preference.title.vulkan_renderer.auto", nil),
+        localize(@"preference.title.vulkan_renderer.moltenvk", nil),
+        localize(@"preference.title.vulkan_renderer.kosmickrisp", nil)
     ].mutableCopy;
 
     if (containsDefault) {

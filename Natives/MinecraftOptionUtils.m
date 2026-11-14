@@ -12,6 +12,10 @@
 }
 
 + (void)setupOptionsAtGameDir:(NSString *)gameDir graphicsBackend:(NSString *)graphicsBackend {
+    [self setupOptionsAtGameDir:gameDir graphicsBackend:graphicsBackend force:NO];
+}
+
++ (void)setupOptionsAtGameDir:(NSString *)gameDir graphicsBackend:(NSString *)graphicsBackend force:(BOOL)force {
     NSAssert(windowWidth > 0 && windowHeight > 0, @"called before setting windowWidth/windowHeight?");
     MinecraftOptionUtils *options = [MinecraftOptionUtils sharedInstance];
     options.optionsPath = [gameDir stringByAppendingPathComponent:@"options.txt"];
@@ -21,8 +25,15 @@
     [options setKey:@"overrideWidth" value:@(windowWidth)];
     [options setKey:@"overrideHeight" value:@(windowHeight)];
     if (graphicsBackend.length) {
-        // only on first creation of options.txt, never overwrite what the player or a mod (MetalUniversal) set (#44)
-        [options setDefaultForKey:@"preferredGraphicsBackend" value:[NSString stringWithFormat:@"\"%@\"", graphicsBackend]];
+        NSString *value = [NSString stringWithFormat:@"\"%@\"", graphicsBackend];
+        if (force) {
+            // the selected renderer cannot run the saved backend, a choice the player made
+            // for a renderer that is no longer selected must not keep the game from starting
+            [options setKey:@"preferredGraphicsBackend" value:value];
+        } else {
+            // only on first creation of options.txt, never overwrite what the player or a mod (MetalUniversal) set (#44)
+            [options setDefaultForKey:@"preferredGraphicsBackend" value:value];
+        }
     }
     // Default settings for performance
     [options setDefaultForKey:@"mipmapLevels" value:@"0"];

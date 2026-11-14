@@ -189,7 +189,14 @@
 "preference.title.renderer.debug.moltenvk" = "MoltenVK (26.2+) - exports Vulkan 1.4, EXPERIMENTAL";
 "preference.title.renderer.debug.kosmickrisp" = "KosmicKrisp (26.2+) - exports Vulkan 1.4, EXPERIMENTAL";
 
-"preference.detail.renderer" = "Change the OpenGL render engine to use. Zink is temporarily disabled on iOS 16 and later to diagnose issues.";
+"preference.detail.renderer" = "Change the OpenGL render engine to use. The Vulkan driver is a separate setting.";
+
+"preference.title.vulkan_renderer" = "Vulkan driver";
+"preference.detail.vulkan_renderer" = "The Vulkan driver the game uses when it renders through Vulkan. Zink and MobileGL bring their own MoltenVK and ignore this.";
+
+"preference.title.vulkan_renderer.auto" = "Auto (MoltenVK)";
+"preference.title.vulkan_renderer.moltenvk" = "MoltenVK - exports Vulkan 1.4, EXPERIMENTAL";
+"preference.title.vulkan_renderer.kosmickrisp" = "KosmicKrisp - exports Vulkan 1.4, EXPERIMENTAL";
 
 "preference.title.resolution" = "Resolution (%)";
 "preference.detail.resolution" = "Allows you to decrease the game resolution.";

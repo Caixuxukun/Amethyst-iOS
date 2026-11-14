@@ -224,13 +224,30 @@ int launchJVM(NSString *username, id launchTarget, int width, int height, int mi
             NSLog(@"[LWJGL] %@", lwjglPick.warning);
         }
 
-        // Setup AME_RENDERER
+        // Setup the renderer pair. AME_RENDERER is the OpenGL implementation the game gets
+        // when it asks for an OpenGL context, the Vulkan driver the game presents through has
+        // its own setting and its own environment variable.
         NSString *renderer = [PLProfiles resolveKeyForCurrentProfile:@"renderer"];
+        NSString *vulkanDriver = [PLProfiles resolveKeyForCurrentProfile:@"vulkanRenderer"];
         gameHasVulkanBackend = versionHasVulkanBackend(launchTarget[@"id"]) || versionHasVulkanBackend(launchTarget[@"inheritsFrom"]);
-        if (gameHasVulkanBackend && ame_renderer_from_name(renderer.UTF8String) == AME_RENDERER_AUTO) {
-            renderer = @RENDERER_NAME_MOLTENVK;
+
+        // profiles saved before the renderers were split keep the Vulkan driver in the renderer key
+        if (ame_renderer_name_is_vulkan_driver(renderer.UTF8String)) {
+            if (vulkanDriver.length == 0 || [vulkanDriver isEqualToString:@RENDERER_NAME_AUTO]) {
+                vulkanDriver = renderer;
+            }
+            renderer = @RENDERER_NAME_MTL_ANGLE;
         }
-        NSLog(@"[JavaLauncher] RENDERER is set to %@\n", renderer);
+        if (renderer.length == 0) renderer = @RENDERER_NAME_AUTO;
+        if (vulkanDriver.length == 0) vulkanDriver = @RENDERER_NAME_AUTO;
+
+        // games with a Vulkan backend have always fallen back to ANGLE for their OpenGL option
+        if (gameHasVulkanBackend && ame_renderer_from_name(renderer.UTF8String) == AME_RENDERER_AUTO) {
+            renderer = @RENDERER_NAME_MTL_ANGLE;
+        }
+
+        NSLog(@"[JavaLauncher] RENDERER is set to %@", renderer);
+        NSLog(@"[JavaLauncher] VULKAN DRIVER is set to %@", vulkanDriver);
         setenv("AME_RENDERER", renderer.UTF8String, 1);
 
         // Apply Zink-specific environment variables if Zink renderer is selected
@@ -251,29 +268,46 @@ int launchJVM(NSString *username, id launchTarget, int width, int height, int mi
             unsetenv("MOBILEGL_LOG_FILE_PATH");
         }
 
-        ame_renderer_t vulkanKind = ame_renderer_from_name(renderer.UTF8String);
-        if (ame_renderer_is_vulkan_native(vulkanKind)) {
+        ame_vulkan_driver_t driver = ame_vulkan_driver_resolve(ame_vulkan_driver_from_name(vulkanDriver.UTF8String));
+        NSString *frameworksPath = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:@"Frameworks"];
+        NSString *driverPath = [frameworksPath stringByAppendingPathComponent:
+                                [NSString stringWithUTF8String:ame_vulkan_driver_file(driver)]];
+        NSString *loadPath = [frameworksPath stringByAppendingPathComponent:
+                              [NSString stringWithUTF8String:ame_vulkan_driver_load_file(driver)]];
+        // Zink and MobileGL build their own MoltenVK in, the driver selected here only reaches
+        // the game's Vulkan backend until those libraries are rebuilt against it
+        BOOL rendererNeedsVulkan = ame_renderer_consumes_vulkan(ame_renderer_from_name(renderer.UTF8String));
+
+        if ([fm fileExistsAtPath:driverPath] && [fm fileExistsAtPath:loadPath]) {
             // env first, the driver reads its config once when it is loaded
-            const char *vulkanFile = ame_vulkan_library_file(vulkanKind);
-            NSString *vulkanPath = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:
-                                    [@"Frameworks/" stringByAppendingString:[NSString stringWithUTF8String:vulkanFile]]];
-            if (vulkanKind == AME_RENDERER_KOSMICKRISP) {
+            setenv(VULKAN_DRIVER_ENV, driverPath.UTF8String, 1);
+            if (driver == AME_VULKAN_DRIVER_KOSMICKRISP) {
                 [KosmicKrispConfig applyEnvironmentFromPreferences];
             } else {
                 [MoltenVKConfig applyEnvironmentFromPreferences];
             }
 
-            ame_vk_preflight_t pf = ame_vk_preflight(vulkanPath.UTF8String);
+            ame_vk_preflight_t pf = ame_vk_preflight(loadPath.UTF8String);
             if (pf.ok) {
-                NSLog(@"[Vulkan] %s Vulkan %u.%u.%u, %@", vulkanFile, pf.apiVersion >> 22, (pf.apiVersion >> 12) & 0x3ff, pf.apiVersion & 0xfff,
-                      vulkanKind == AME_RENDERER_KOSMICKRISP ? [KosmicKrispConfig activeConfigSummary]
+                NSLog(@"[Vulkan] %s Vulkan %u.%u.%u (loaded through %@), %@",
+                      ame_vulkan_driver_file(driver), pf.apiVersion >> 22, (pf.apiVersion >> 12) & 0x3ff, pf.apiVersion & 0xfff,
+                      loadPath.lastPathComponent,
+                      driver == AME_VULKAN_DRIVER_KOSMICKRISP ? [KosmicKrispConfig activeConfigSummary]
                                                              : [MoltenVKConfig activeConfigSummary]);
+                if (rendererNeedsVulkan) {
+                    NSLog(@"[Vulkan] %@ renders through its own MoltenVK, the %s driver is %@",
+                          renderer, ame_vulkan_driver_display_name(driver),
+                          gameHasVulkanBackend ? @"only used by the game's Vulkan backend" : @"not used by this game");
+                }
             } else {
-                NSLog(@"[Vulkan] %s preflight failed: %s", vulkanFile, pf.error);
+                NSLog(@"[Vulkan] %s preflight failed: %s", loadPath.lastPathComponent.UTF8String, pf.error);
                 vulkanUnavailable = YES;
-                renderer = @"auto";
-                setenv("AME_RENDERER", "auto", 1);
+                unsetenv(VULKAN_DRIVER_ENV);
             }
+        } else {
+            NSLog(@"[Vulkan] %s is missing from the bundle", ame_vulkan_driver_file(driver));
+            vulkanUnavailable = YES;
+            unsetenv(VULKAN_DRIVER_ENV);
         }
 
         // MobileGlues wants a writable dir for its log/cache, the default one is android's /sdcard
@@ -344,20 +378,27 @@ int launchJVM(NSString *username, id launchTarget, int width, int height, int mi
     }
 
     NSString *graphicsBackend = nil;
+    BOOL forceGraphicsBackend = NO;
     if (gameHasVulkanBackend) {
-        BOOL vulkanRuns = !vulkanUnavailable && ame_renderer_is_vulkan_native(ame_renderer_from_name(getenv("AME_RENDERER")));
-        if (vulkanRuns) {
-            // Vulkan-only renderers have no GL to fall back to
-            graphicsBackend = @"vulkan";
-        } else if (vulkanUnavailable) {
-            // the Vulkan driver failed its preflight, a saved "vulkan" could never start
+        ame_renderer_t glRenderer = ame_renderer_from_stored_name(getenv("AME_RENDERER"));
+        if (vulkanUnavailable) {
+            // the selected Vulkan driver failed its preflight, a saved "vulkan" could never start
             graphicsBackend = @"opengl";
+            forceGraphicsBackend = YES;
+        } else if (glRenderer == AME_RENDERER_ZINK) {
+            // Zink blits OSMesa's buffer into a plain layer, the game cannot create a Vulkan surface on it
+            graphicsBackend = @"opengl";
+            forceGraphicsBackend = YES;
+            NSLog(@"[JavaLauncher] Zink has no Vulkan surface, hiding the game's Vulkan backend");
+            vulkanUnavailable = YES;
+        } else {
+            // a new options.txt starts on the game's Vulkan backend, an existing choice is kept (#42)
+            graphicsBackend = @"vulkan";
         }
-        // any other renderer (MobileGL, Zink, ...): leave options.txt alone so the in-game
-        // Graphics API choice is kept between launches (#42)
-        NSLog(@"[JavaLauncher] preferredGraphicsBackend=%@", graphicsBackend ?: @"(untouched)");
+        NSLog(@"[JavaLauncher] preferredGraphicsBackend=%@ (%@)",
+              graphicsBackend, forceGraphicsBackend ? @"forced" : @"default only");
     }
-    [MinecraftOptionUtils setupOptionsAtGameDir:gameDir graphicsBackend:graphicsBackend];
+    [MinecraftOptionUtils setupOptionsAtGameDir:gameDir graphicsBackend:graphicsBackend force:forceGraphicsBackend];
     
     int margc = -1;
     const char *margv[1000];
@@ -422,9 +463,12 @@ int launchJVM(NSString *username, id launchTarget, int width, int height, int mi
     // Preset OpenGL libname
     const char *glLibName = getenv("AME_RENDERER");
     if (glLibName) {
-        if (!strcmp(glLibName, "auto") || ame_renderer_is_vulkan_native(ame_renderer_from_name(glLibName))) {
-            // workaround only applies to 1.20.2+, MoltenVK games that ask for GL land here too
+        ame_renderer_t glKind = ame_renderer_from_stored_name(glLibName);
+        if (glKind == AME_RENDERER_AUTO) {
+            // auto is still unresolved here, the GL version hints decide it before LWJGL loads it
             glLibName = RENDERER_NAME_MTL_ANGLE;
+        } else if (glKind != AME_RENDERER_UNKNOWN) {
+            glLibName = ame_renderer_file_name(glKind);
         }
         margv[++margc] = [NSString stringWithFormat:@"-Dorg.lwjgl.opengl.libname=%s", glLibName].UTF8String;
     }
@@ -432,12 +476,15 @@ int launchJVM(NSString *username, id launchTarget, int width, int height, int mi
     // read by GLFWVulkan.glfwVulkanSupported, absent means yes
     if (vulkanUnavailable) margv[++margc] = "-Dame.vulkan.available=false";
 
-    // LWJGL's bare dylib lookup does not search Frameworks, so give it the bundled path of the selected driver
-    ame_renderer_t lwjglVulkanKind = ame_renderer_from_name(getenv("AME_RENDERER"));
-    NSString *bundledVulkan = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:
-                               [@"Frameworks/" stringByAppendingString:[NSString stringWithUTF8String:ame_vulkan_library_file(lwjglVulkanKind)]]];
-    if ([fm fileExistsAtPath:bundledVulkan]) {
-        margv[++margc] = [NSString stringWithFormat:@"-Dame.vulkan.libpath=%@", bundledVulkan].UTF8String;
+    // LWJGL's bare dylib lookup does not search Frameworks, so give it the bundled path of the
+    // library to load: the selected driver itself, or the loader shim KosmicKrisp needs
+    if (!vulkanUnavailable) {
+        NSString *bundledVulkan = [NSBundle.mainBundle.bundlePath stringByAppendingPathComponent:
+                                   [@"Frameworks/" stringByAppendingString:
+                                    [NSString stringWithUTF8String:ame_vulkan_driver_load_file(ame_vulkan_driver_selected())]]];
+        if ([fm fileExistsAtPath:bundledVulkan]) {
+            margv[++margc] = [NSString stringWithFormat:@"-Dame.vulkan.libpath=%@", bundledVulkan].UTF8String;
+        }
     }
 
     NSString *librariesPath = [NSString stringWithFormat:@"%@/libs", NSBundle.mainBundle.bundlePath];

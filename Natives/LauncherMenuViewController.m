@@ -423,6 +423,7 @@
     const char *installType = getenv("AME_DETECTEDINST");
     [info appendFormat:@"Install type: %s\n", installType ? installType : "unknown"];
     [info appendFormat:@"Renderer: %@\n", [PLProfiles resolveKeyForCurrentProfile:@"renderer"]];
+    [info appendFormat:@"Vulkan driver: %@\n", [PLProfiles resolveKeyForCurrentProfile:@"vulkanRenderer"] ?: @"auto"];
 
     NSString *infoPath = [NSTemporaryDirectory() stringByAppendingPathComponent:@"amethyst_diagnostic_info.txt"];
     NSError *writeError = nil;

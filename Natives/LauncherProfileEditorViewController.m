@@ -54,6 +54,8 @@
     }
     NSArray *rendererKeys = getRendererKeys(YES);
     NSArray *rendererList = getRendererNames(YES);
+    NSArray *vulkanRendererKeys = getVulkanRendererKeys(YES);
+    NSArray *vulkanRendererList = getVulkanRendererNames(YES);
     NSArray *touchControlList = [self listFilesAtPath:[NSString stringWithFormat:@"%s/controlmap", getenv("AME_HOME")]];
     NSArray *gamepadControlList = [self listFilesAtPath:[NSString stringWithFormat:@"%s/controlmap/gamepads", getenv("AME_HOME")]];
     NSMutableArray *javaList = [getPrefObject(@"java.java_homes") allKeys].mutableCopy;
@@ -115,6 +117,13 @@
               @"type": self.typePickField,
               @"pickKeys": rendererKeys,
               @"pickList": rendererList
+            },
+            @{@"key": @"vulkanRenderer",
+              @"title": @"preference.title.vulkan_renderer",
+              @"icon": @"bolt",
+              @"type": self.typePickField,
+              @"pickKeys": vulkanRendererKeys,
+              @"pickList": vulkanRendererList
             },
             // Control settings
             @{@"key": @"defaultTouchCtrl",

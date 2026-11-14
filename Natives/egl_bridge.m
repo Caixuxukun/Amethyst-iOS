@@ -52,19 +52,14 @@ int pojavInit(BOOL useStackQueue) {
 
 int pojavInitOpenGL() {
     const char *name = getenv("AME_RENDERER");
-    ame_renderer_t kind = ame_renderer_from_name(name);
+    ame_renderer_t kind = ame_renderer_from_stored_name(name);
     // auto still unresolved here means the game never asked for a GL version, pick gl4es
     if (kind == AME_RENDERER_AUTO) {
         kind = AME_RENDERER_GL4ES;
-        name = RENDERER_NAME_GL4ES;
-        setenv("AME_RENDERER", name, 1);
     }
 
-    // the Vulkan drivers have no GL of their own, a game that wants one runs on ANGLE
-    if (ame_renderer_is_vulkan_native(kind)) {
-        AMVulkanNoteGLFallback();
-        kind = AME_RENDERER_ANGLE;
-        name = RENDERER_NAME_MTL_ANGLE;
+    if (kind != AME_RENDERER_UNKNOWN) {
+        name = ame_renderer_file_name(kind);
         setenv("AME_RENDERER", name, 1);
     }
 

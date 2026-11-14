@@ -17,6 +17,7 @@
 
 @interface LauncherPreferencesViewController()
 @property(nonatomic) NSArray<NSString*> *rendererKeys, *rendererList;
+@property(nonatomic) NSArray<NSString*> *vulkanRendererKeys, *vulkanRendererList;
 @end
 
 @implementation LauncherPreferencesViewController
@@ -49,6 +50,8 @@
 
     self.rendererKeys = getRendererKeys(NO);
     self.rendererList = getRendererNames(NO);
+    self.vulkanRendererKeys = getVulkanRendererKeys(NO);
+    self.vulkanRendererList = getVulkanRendererNames(NO);
     
     BOOL(^whenNotInGame)() = ^BOOL(){
         return self.navigationController != nil;
@@ -166,6 +169,14 @@
               @"enableCondition": whenNotInGame,
               @"pickKeys": self.rendererKeys,
               @"pickList": self.rendererList
+            },
+            @{@"key": @"vulkan_renderer",
+              @"hasDetail": @YES,
+              @"icon": @"bolt",
+              @"type": self.typePickField,
+              @"enableCondition": whenNotInGame,
+              @"pickKeys": self.vulkanRendererKeys,
+              @"pickList": self.vulkanRendererList
             },
             @{@"key": @"resolution",
               @"hasDetail": @YES,

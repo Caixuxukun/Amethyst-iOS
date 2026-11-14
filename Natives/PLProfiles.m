@@ -6,6 +6,7 @@ static PLProfiles* current;
 NSNotificationName const PLProfilesDidChangeNotification = @"PLProfilesDidChange";
 
 @interface PLProfiles()
+- (void)migrateLegacyRendererSelection;
 @end
 
 @implementation PLProfiles
@@ -53,7 +54,8 @@ NSNotificationName const PLProfilesDidChangeNotification = @"PLProfilesDidChange
         @"defaultTouchCtrl": @"control.default_ctrl",
         @"defaultGamepadCtrl": @"control.default_gamepad_ctrl",
         @"javaArgs": @"java.java_args",
-        @"renderer": @"video.renderer"
+        @"renderer": @"video.renderer",
+        @"vulkanRenderer": @"video.vulkan_renderer"
     };
     return getPrefObject(prefDefaults[key]);
 }
@@ -71,7 +73,36 @@ NSNotificationName const PLProfilesDidChangeNotification = @"PLProfilesDidChange
         [self save];
     }
 
+    [self migrateLegacyRendererSelection];
+
     return self;
+}
+
+// Before the OpenGL renderer and the Vulkan driver were separate settings, picking
+// MoltenVK/KosmicKrisp stored the driver in the renderer key and forced ANGLE for OpenGL.
+// Move those profiles to ANGLE + the Vulkan driver they had been using.
+- (void)migrateLegacyRendererSelection {
+    NSMutableDictionary *profiles = self.profileDict[@"profiles"];
+    if (![profiles isKindOfClass:NSMutableDictionary.class]) return;
+
+    BOOL changed = NO;
+    for (NSString *name in profiles.allKeys) {
+        NSMutableDictionary *profile = profiles[name];
+        if (![profile isKindOfClass:NSMutableDictionary.class]) continue;
+        NSString *storedRenderer = profile[@"renderer"];
+        if (!ame_renderer_name_is_vulkan_driver(storedRenderer.UTF8String)) continue;
+
+        NSString *storedDriver = profile[@"vulkanRenderer"];
+        if (storedDriver.length == 0 || [storedDriver isEqualToString:@RENDERER_NAME_AUTO]) {
+            profile[@"vulkanRenderer"] = storedRenderer;
+        }
+        profile[@"renderer"] = @RENDERER_NAME_MTL_ANGLE;
+        changed = YES;
+        NSLog(@"[PLProfiles] Migrated renderer \"%@\" of profile \"%@\" to ANGLE + Vulkan driver %@",
+              storedRenderer, name, profile[@"vulkanRenderer"]);
+    }
+
+    if (changed) [self save];
 }
 
 - (id)profiles {

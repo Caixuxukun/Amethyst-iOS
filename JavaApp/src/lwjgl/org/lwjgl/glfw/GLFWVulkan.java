@@ -91,7 +91,7 @@ public class GLFWVulkan {
      */
     @NativeType("int")
     public static boolean glfwVulkanSupported() {
-        // the launcher sets this to false when MoltenVK failed its startup check
+        // the launcher sets this to false when the selected Vulkan driver failed its startup check
         return !"false".equals(System.getProperty("ame.vulkan.available"));
     }
 

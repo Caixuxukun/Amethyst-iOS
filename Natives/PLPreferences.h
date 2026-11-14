@@ -11,6 +11,8 @@
 - (void)toggleIsolationForced:(BOOL)forced;
 - (id)getObject:(NSString *)key;
 - (BOOL)setObject:(NSString *)key value:(id)value;
+- (void)saveGlobalPref;
+- (void)saveInstancePref;
 - (void)reset;
 
 @end

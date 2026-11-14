@@ -230,7 +230,7 @@ void gl_terminate() {
 }
 
 void set_gl_bridge_tbl() {
-    gl_renderer = ame_renderer_from_name(getenv("AME_RENDERER"));
+    gl_renderer = ame_renderer_from_stored_name(getenv("AME_RENDERER"));
     br_init = gl_init;
     br_init_context = (br_init_context_t) gl_init_context;
     br_make_current = (br_make_current_t) gl_make_current;

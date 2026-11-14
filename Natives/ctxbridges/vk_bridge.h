@@ -18,6 +18,3 @@ bool AMVulkanNativeActive(void);
 
 // layer handed to the game as its GLFW window, marks the session as Vulkan
 void *AMVulkanSurfaceLayer(void);
-
-// a GL context was requested while the MoltenVK renderer is selected
-void AMVulkanNoteGLFallback(void);

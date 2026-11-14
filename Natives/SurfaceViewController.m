@@ -378,8 +378,8 @@ static GameSurfaceView* pojavWindow;
 
     resolutionScale = getPrefFloat(@"video.resolution") / 100.0;
     // ANGLE sizes its drawable from bounds * contentsScale and ignores drawableSize, MoltenVK compares the two
-    ame_renderer_t renderer = ame_renderer_from_name(getenv("AME_RENDERER"));
-    BOOL vulkanNative = ame_renderer_is_vulkan_native(renderer) || AMVulkanNativeActive();
+    ame_renderer_t renderer = ame_renderer_from_stored_name(getenv("AME_RENDERER"));
+    BOOL vulkanNative = AMVulkanNativeActive();
     BOOL scaledByLayer = ame_renderer_uses_angle(renderer) || vulkanNative;
     self.surfaceView.layer.contentsScale = scaledByLayer ? self.screenScale * resolutionScale : self.screenScale;
 
@@ -408,7 +408,7 @@ static GameSurfaceView* pojavWindow;
     }
 
     // the Vulkan driver owns drawableSize for Kosmic Krisp, only MoltenVK and ANGLE get it from here
-    if ([self.surfaceView.layer isKindOfClass:CAMetalLayer.class] && !ame_vulkan_driver_sizes_layer(renderer)) {
+    if ([self.surfaceView.layer isKindOfClass:CAMetalLayer.class] && !ame_vulkan_driver_sizes_layer(ame_vulkan_driver_selected())) {
         ((CAMetalLayer *)self.surfaceView.layer).drawableSize =
             CGSizeMake(MAX(windowWidth, 1), MAX(windowHeight, 1));
     }

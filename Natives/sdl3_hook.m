@@ -156,7 +156,7 @@ void AmethystSDL3ApplyResolutionScale(void) {
 
     view.layer.contentsScale = scale;
     // Kosmic Krisp sizes its own drawable, see ame_vulkan_driver_sizes_layer
-    BOOL driverSizes = ame_vulkan_driver_sizes_layer(ame_renderer_from_name(getenv("AME_RENDERER")));
+    BOOL driverSizes = ame_vulkan_driver_sizes_layer(ame_vulkan_driver_selected());
     if (!driverSizes && [view.layer isKindOfClass:CAMetalLayer.class] && view.bounds.size.width > 0 && view.bounds.size.height > 0) {
         // same rounding MoltenVK uses, so its swapchain is optimal
         uint32_t w, h;
@@ -487,14 +487,12 @@ void AmethystSDL3Prepare(void) {
      */
     setenv("SDL_IOS_HIDE_HOME_INDICATOR", "2", 0);
 
-    // same driver the launcher picked for the game. JavaLauncher sets AME_RENDERER first; if it is
-    // missing this falls back to MoltenVK, the old behaviour
-    ame_renderer_t sdlKind = ame_renderer_from_name(getenv("AME_RENDERER"));
-    NSString *vulkanLib =
-        [NSBundle.mainBundle.bundlePath
-            stringByAppendingPathComponent:
-                [@"Frameworks/" stringByAppendingString:
-                    [NSString stringWithUTF8String:ame_vulkan_library_file(sdlKind)]]];
+    // the Vulkan driver JavaLauncher picked for the game; without it SDL falls back to
+    // MoltenVK, the old behaviour
+    const char *vulkanLoadFile = ame_vulkan_driver_load_file(ame_vulkan_driver_selected());
+    NSString *vulkanLib = [NSBundle.mainBundle.bundlePath
+        stringByAppendingPathComponent:
+            [@"Frameworks/" stringByAppendingString:[NSString stringWithUTF8String:vulkanLoadFile]]];
 
     if ([[NSFileManager defaultManager] fileExistsAtPath:vulkanLib]) {
         setenv("SDL_VULKAN_LIBRARY", vulkanLib.UTF8String, 1);

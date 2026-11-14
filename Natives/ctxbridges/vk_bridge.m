@@ -39,10 +39,3 @@ void *AMVulkanSurfaceLayer(void) {
     }
     return (__bridge void *)layer;
 }
-
-void AMVulkanNoteGLFallback(void) {
-    static dispatch_once_t once;
-    dispatch_once(&once, ^{
-        NSLog(@"[VulkanBridge] game asked for an OpenGL context, falling back to ANGLE");
-    });
-}

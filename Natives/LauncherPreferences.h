@@ -25,3 +25,5 @@ NSString* getSelectedJavaHome(NSString* defaultJRETag, int minVersion);
 
 NSArray* getRendererKeys(BOOL containsDefault);
 NSArray* getRendererNames(BOOL containsDefault);
+NSArray* getVulkanRendererKeys(BOOL containsDefault);
+NSArray* getVulkanRendererNames(BOOL containsDefault);

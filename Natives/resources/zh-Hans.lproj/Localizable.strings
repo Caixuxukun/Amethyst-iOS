@@ -172,7 +172,14 @@
 "preference.title.renderer.debug.angle" = "ANGLE（仅支持1.17+）- exports OpenGL 版本 3.2";
 "preference.title.renderer.debug.zink" = "Zink（Mesa 25.0）- exports OpenGL 版本 4.1";
 
-"preference.detail.renderer" = "更改使用的 OpenGL 渲染器";
+"preference.detail.renderer" = "更改使用的 OpenGL 渲染器，与下方的 Vulkan 驱动相互独立";
+
+"preference.title.vulkan_renderer" = "Vulkan 驱动";
+"preference.detail.vulkan_renderer" = "游戏使用 Vulkan 渲染时的驱动。Zink 和 MobileGL 自带 MoltenVK，不受此项影响。";
+
+"preference.title.vulkan_renderer.auto" = "自动（MoltenVK）";
+"preference.title.vulkan_renderer.moltenvk" = "MoltenVK - 导出 Vulkan 1.4，实验性";
+"preference.title.vulkan_renderer.kosmickrisp" = "KosmicKrisp - 导出 Vulkan 1.4，实验性";
 
 "preference.title.resolution" = "分辨率缩放 (%)";
 "preference.detail.resolution" = "降低分辨率可能会提升FPS。默认分辨率为屏幕的分辨率";

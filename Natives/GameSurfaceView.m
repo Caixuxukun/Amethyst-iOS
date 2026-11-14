@@ -18,7 +18,7 @@
 }
 
 + (Class)layerClass {
-    if (ame_renderer_from_name([PLProfiles resolveKeyForCurrentProfile:@"renderer"].UTF8String) == AME_RENDERER_ZINK) {
+    if (ame_renderer_from_stored_name([PLProfiles resolveKeyForCurrentProfile:@"renderer"].UTF8String) == AME_RENDERER_ZINK) {
         return CALayer.class;
     } else {
         return CAMetalLayer.class;
