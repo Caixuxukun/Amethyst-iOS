@@ -456,6 +456,8 @@ dep_jithelper: dep_stikjit
 	rm -rf $(WORKINGDIR)/jithelper
 	mkdir -p $(WORKINGDIR)/jithelper
 	cp -R $(STIKJIT_DIR)/Sources $(WORKINGDIR)/jithelper/Sources || exit 1
+	# compiled into this executable, not into a resilient framework
+	sed -i '' -e 's/@_implementationOnly import/import/' $(WORKINGDIR)/jithelper/Sources/*.swift || exit 1
 	cp -R $(STIKJIT_DIR)/idevice $(WORKINGDIR)/jithelper/idevice || exit 1
 	cp -R $(STIKJIT_DIR)/iokit $(WORKINGDIR)/jithelper/iokit || exit 1
 	cp $(SOURCEDIR)/Natives/jit/AmethystJITHelper.swift $(SOURCEDIR)/Natives/jit/AmethystJITHelper-Info.plist $(SOURCEDIR)/Natives/jit/project.yml $(WORKINGDIR)/jithelper/ || exit 1

@@ -743,7 +743,7 @@ static void AMEJITPostLocalNotification(NSString *title, NSString *body) {
         self.service = [[NSNetService alloc] initWithDomain:@"" type:AMEPairingServiceType
                                                        name:serviceName port:port];
         if (txt.count > 0) {
-            [self.service setTXTRecord:[NSNetService dataFromTXTRecordDictionary:txt]];
+            [self.service setTXTRecordData:[NSNetService dataFromTXTRecordDictionary:txt]];
         }
         self.service.delegate = nil;
         [self.service publish];
